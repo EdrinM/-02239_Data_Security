@@ -11,7 +11,7 @@ import java.util.Map;
 public class PrintServerImpl extends UnicastRemoteObject implements PrintServer {
     private Map<String, String> users = new HashMap<>(); // Username to hashed password
     private Map<String, Long> sessions = new HashMap<>(); // Username to session start time
-    private final long SESSION_TIMEOUT = 300000; // 5 minutes in milliseconds
+    private final long SESSION_TIMEOUT = 5000; // 5 seconds for quick testing
 
     public PrintServerImpl() throws RemoteException {
         super();
@@ -68,52 +68,68 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
         }
     }
 
-    @Override
-    public void print(String filename, String printer) throws RemoteException {
-        logAction("print", "Printing file " + filename + " on printer " + printer);
+
+    private void checkSession(String username) throws RemoteException {
+        if (!isSessionValid(username)) {
+            throw new RemoteException("Session expired. Please reauthenticate.");
+        }
     }
 
     @Override
-    public String queue(String printer) throws RemoteException {
-        logAction("queue", "Fetching queue for printer " + printer);
+    public void print(String filename, String printer, String username) throws RemoteException {
+        checkSession(username); // Validate the session before processing
+        logAction("print", "User " + username + " printing file " + filename + " on printer " + printer);
+    }
+
+    @Override
+    public String queue(String printer, String username) throws RemoteException {
+        checkSession(username); // Validate the session before processing
+        logAction("queue", "User " + username + " fetching queue for printer " + printer);
         return "Queue for printer " + printer + ": [job1, job2]";
     }
 
     @Override
-    public void topQueue(String printer, int job) throws RemoteException {
-        logAction("topQueue", "Moving job " + job + " to top of queue for printer " + printer);
+    public void topQueue(String printer, int job, String username) throws RemoteException {
+        checkSession(username); // Validate the session before processing
+        logAction("topQueue", "User " + username + " moving job " + job + " to top of queue for printer " + printer);
     }
 
     @Override
-    public void start() throws RemoteException {
-        logAction("start", "Starting the print server.");
+    public void start(String username) throws RemoteException {
+        checkSession(username); // Validate the session before processing
+        logAction("start", "User " + username + " starting the print server.");
     }
 
     @Override
-    public void stop() throws RemoteException {
-        logAction("stop", "Stopping the print server.");
+    public void stop(String username) throws RemoteException {
+        checkSession(username); // Validate the session before processing
+        logAction("stop", "User " + username + " stopping the print server.");
     }
 
     @Override
-    public void restart() throws RemoteException {
-        logAction("restart", "Restarting the print server.");
+    public void restart(String username) throws RemoteException {
+        checkSession(username); // Validate the session before processing
+        logAction("restart", "User " + username + " restarting the print server.");
     }
 
     @Override
-    public String status(String printer) throws RemoteException {
-        logAction("status", "Checking status for printer " + printer);
+    public String status(String printer, String username) throws RemoteException {
+        checkSession(username); // Validate the session before processing
+        logAction("status", "User " + username + " checking status of printer " + printer);
         return "Status of printer " + printer + ": OK";
     }
 
     @Override
-    public String readConfig(String parameter) throws RemoteException {
-        logAction("readConfig", "Reading config for parameter " + parameter);
+    public String readConfig(String parameter, String username) throws RemoteException {
+        checkSession(username); // Validate the session before processing
+        logAction("readConfig", "User " + username + " reading config for parameter " + parameter);
         return "Value of " + parameter + ": 42";
     }
 
     @Override
-    public void setConfig(String parameter, String value) throws RemoteException {
-        logAction("setConfig", "Setting parameter " + parameter + " to value " + value);
+    public void setConfig(String parameter, String value, String username) throws RemoteException {
+        checkSession(username); // Validate the session before processing
+        logAction("setConfig", "User " + username + " setting parameter " + parameter + " to value " + value);
     }
 
     private void logAction(String action, String details) {
