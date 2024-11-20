@@ -46,89 +46,100 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
         }
     }
 
-    @Override
-    public boolean authenticate(String username, String password) throws RemoteException {
+    private void authenticate(String username, String password) throws RemoteException {
         String hashedPassword = hashPassword(password);
-        if (users.containsKey(username) && users.get(username).equals(hashedPassword)) {
+        if (!users.containsKey(username) || !users.get(username).equals(hashedPassword)) {
+            throw new RemoteException("Authentication failed. Invalid username or password.");
+        }
+
+        // Only set session if it doesn't already exist
+        if (!sessions.containsKey(username)) {
             sessions.put(username, System.currentTimeMillis());
-            System.out.println("User " + username + " authenticated.");
-            return true;
-        }
-        System.out.println("Authentication failed for user: " + username);
-        return false;
-    }
-
-    private boolean isSessionValid(String username) {
-        Long lastActive = sessions.get(username);
-        if (lastActive != null && (System.currentTimeMillis() - lastActive) <= SESSION_TIMEOUT) {
-            return true;
+            System.out.println("Session created for " + username + " at " + System.currentTimeMillis());
         } else {
-            sessions.remove(username); // Remove expired session
-            return false;
+            System.out.println("Session already active for " + username);
         }
     }
-
 
     private void checkSession(String username) throws RemoteException {
-        if (!isSessionValid(username)) {
+        Long lastActive = sessions.get(username);
+        if (lastActive == null) {
+            System.out.println("No active session found for " + username);
+        } else {
+            long timeElapsed = System.currentTimeMillis() - lastActive;
+            System.out.println("Time elapsed for session of " + username + ": " + timeElapsed + "ms");
+        }
+
+        if (lastActive == null || (System.currentTimeMillis() - lastActive) > SESSION_TIMEOUT) {
+            System.out.println("Session expired for " + username);
+            sessions.remove(username);
             throw new RemoteException("Session expired. Please reauthenticate.");
         }
     }
 
     @Override
-    public void print(String filename, String printer, String username) throws RemoteException {
-        checkSession(username); // Validate the session before processing
+    public void print(String filename, String printer, String username, String password) throws RemoteException {
+        authenticate(username, password); // Authenticate user
+        checkSession(username); // Validate session
         logAction("print", "User " + username + " printing file " + filename + " on printer " + printer);
     }
 
     @Override
-    public String queue(String printer, String username) throws RemoteException {
-        checkSession(username); // Validate the session before processing
+    public String queue(String printer, String username, String password) throws RemoteException {
+        authenticate(username, password); // Authenticate the user
+        checkSession(username); // Validate the session
         logAction("queue", "User " + username + " fetching queue for printer " + printer);
         return "Queue for printer " + printer + ": [job1, job2]";
     }
 
     @Override
-    public void topQueue(String printer, int job, String username) throws RemoteException {
-        checkSession(username); // Validate the session before processing
+    public void topQueue(String printer, int job, String username, String password) throws RemoteException {
+        authenticate(username, password); // Authenticate user
+        checkSession(username); // Validate session
         logAction("topQueue", "User " + username + " moving job " + job + " to top of queue for printer " + printer);
     }
 
     @Override
-    public void start(String username) throws RemoteException {
-        checkSession(username); // Validate the session before processing
+    public void start(String username, String password) throws RemoteException {
+        authenticate(username, password); // Authenticate user
+        checkSession(username); // Validate session
         logAction("start", "User " + username + " starting the print server.");
     }
 
     @Override
-    public void stop(String username) throws RemoteException {
-        checkSession(username); // Validate the session before processing
+    public void stop(String username, String password) throws RemoteException {
+        authenticate(username, password); // Authenticate user
+        checkSession(username); // Validate session
         logAction("stop", "User " + username + " stopping the print server.");
     }
 
     @Override
-    public void restart(String username) throws RemoteException {
-        checkSession(username); // Validate the session before processing
+    public void restart(String username, String password) throws RemoteException {
+        authenticate(username, password); // Authenticate user
+        checkSession(username); // Validate session
         logAction("restart", "User " + username + " restarting the print server.");
     }
 
     @Override
-    public String status(String printer, String username) throws RemoteException {
-        checkSession(username); // Validate the session before processing
+    public String status(String printer, String username, String password) throws RemoteException {
+        authenticate(username, password); // Authenticate user
+        checkSession(username); // Validate session
         logAction("status", "User " + username + " checking status of printer " + printer);
         return "Status of printer " + printer + ": OK";
     }
 
     @Override
-    public String readConfig(String parameter, String username) throws RemoteException {
-        checkSession(username); // Validate the session before processing
+    public String readConfig(String parameter, String username, String password) throws RemoteException {
+        authenticate(username, password); // Authenticate user
+        checkSession(username); // Validate session
         logAction("readConfig", "User " + username + " reading config for parameter " + parameter);
         return "Value of " + parameter + ": 42";
     }
 
     @Override
-    public void setConfig(String parameter, String value, String username) throws RemoteException {
-        checkSession(username); // Validate the session before processing
+    public void setConfig(String parameter, String value, String username, String password) throws RemoteException {
+        authenticate(username, password); // Authenticate user
+        checkSession(username); // Validate session
         logAction("setConfig", "User " + username + " setting parameter " + parameter + " to value " + value);
     }
 

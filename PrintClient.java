@@ -16,29 +16,23 @@ public class PrintClient {
             System.out.print("Enter password: ");
             String password = scanner.nextLine();
 
-            if (server.authenticate(username, password)) {
-                System.out.println("User authenticated successfully!");
-
-                // Perform some server operations
+            // Perform some server operations
+            try {
                 System.out.println("Sending print request...");
-                server.print("file.txt", "Printer1", username);
+                server.print("file.txt", "Printer1", username, password);
 
                 System.out.println("Fetching queue...");
-                System.out.println(server.queue("Printer1", username));
+                System.out.println(server.queue("Printer1", username, password));
 
                 // Wait for session expiration
                 System.out.println("Waiting for session to expire...");
-                Thread.sleep(6000); // Wait longer than SESSION_TIMEOUT
+                Thread.sleep(7000); // Wait longer than SESSION_TIMEOUT
 
                 // Attempt to fetch the queue again after session expiration
                 System.out.println("Fetching queue after session expiration...");
-                try {
-                    System.out.println(server.queue("Printer1", username));
-                } catch (Exception e) {
-                    System.out.println("Server response: " + e.getMessage());
-                }
-            } else {
-                System.out.println("Authentication failed.");
+                System.out.println(server.queue("Printer1", username, password));
+            } catch (Exception e) {
+                System.out.println("Server response: " + e.getMessage());
             }
 
         } catch (Exception e) {
