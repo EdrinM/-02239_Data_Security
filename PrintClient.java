@@ -5,36 +5,70 @@ import java.util.Scanner;
 public class PrintClient {
     public static void main(String[] args) {
         try {
+            // Connect to the remote server
             Registry registry = LocateRegistry.getRegistry("localhost", 2099); // Match server port
             PrintServer server = (PrintServer) registry.lookup("PrintServer");
 
             Scanner scanner = new Scanner(System.in);
 
-            System.out.print("Enter username: ");
-            String username = scanner.nextLine();
+            String username = null;
+            String password = null;
 
-            System.out.print("Enter password: ");
-            String password = scanner.nextLine();
+            boolean isRunning = true;
 
-            // Perform some server operations
-            try {
-                System.out.println("Sending print request...");
-                server.print("file.txt", "Printer1", username, password);
+            while (isRunning) {
+                if (username == null || password == null) {
+                    System.out.print("Enter username: ");
+                    username = scanner.nextLine();
 
-                System.out.println("Fetching queue...");
-                System.out.println(server.queue("Printer1", username, password));
+                    System.out.print("Enter password: ");
+                    password = scanner.nextLine();
+                }
 
-                // Wait for session expiration
-                System.out.println("Waiting for session to expire...");
-                Thread.sleep(7000); // Wait longer than SESSION_TIMEOUT
+                // Present user with options
+                System.out.println("\nAvailable commands: print, queue, logout");
+                System.out.print("Enter command: ");
+                String command = scanner.nextLine();
 
-                // Attempt to fetch the queue again after session expiration
-                System.out.println("Fetching queue after session expiration...");
-                System.out.println(server.queue("Printer1", username, password));
-            } catch (Exception e) {
-                System.out.println("Server response: " + e.getMessage());
+                try {
+                    switch (command.toLowerCase()) {
+                        case "print":
+                            System.out.print("Enter filename: ");
+                            String filename = scanner.nextLine();
+                            System.out.print("Enter printer: ");
+                            String printer = scanner.nextLine();
+                            server.print(filename, printer, username, password);
+                            System.out.println("Print request sent.");
+                            break;
+
+                        case "queue":
+                            System.out.print("Enter printer: ");
+                            printer = scanner.nextLine();
+                            System.out.println("Queue: " + server.queue(printer, username, password));
+                            break;
+
+                        case "logout":
+                            server.logout(username, password);
+                            System.out.println("Logged out successfully.");
+                            isRunning = false;
+                            break;
+
+                        default:
+                            System.out.println("Unknown command. Please try again.");
+                    }
+                } catch (Exception e) {
+                    // Check if the session expired and prompt for reauthentication
+                    if (e.getMessage().contains("Session expired")) {
+                        System.out.println("Session expired. Please reauthenticate.");
+                        username = null; // Reset credentials
+                        password = null;
+                    } else {
+                        System.out.println("Server response: " + e.getMessage());
+                    }
+                }
             }
 
+            scanner.close();
         } catch (Exception e) {
             e.printStackTrace();
         }
