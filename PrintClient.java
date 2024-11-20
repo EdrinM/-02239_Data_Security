@@ -11,59 +11,115 @@ public class PrintClient {
 
             Scanner scanner = new Scanner(System.in);
 
-            String username = null;
-            String password = null;
-
             boolean isRunning = true;
 
             while (isRunning) {
-                if (username == null || password == null) {
+                String username = null;
+                String password = null;
+
+                // Authenticate user
+                while (username == null || password == null) {
                     System.out.print("Enter username: ");
                     username = scanner.nextLine();
 
                     System.out.print("Enter password: ");
                     password = scanner.nextLine();
+
+                    // Simple validation (can add more checks as needed)
+                    if (username.isBlank() || password.isBlank()) {
+                        System.out.println("Invalid input. Please try again.");
+                        username = null;
+                        password = null;
+                    }
                 }
 
-                // Present user with options
-                System.out.println("\nAvailable commands: print, queue, logout");
-                System.out.print("Enter command: ");
-                String command = scanner.nextLine();
+                boolean authenticatedSession = true;
 
-                try {
-                    switch (command.toLowerCase()) {
-                        case "print":
-                            System.out.print("Enter filename: ");
-                            String filename = scanner.nextLine();
-                            System.out.print("Enter printer: ");
-                            String printer = scanner.nextLine();
-                            server.print(filename, printer, username, password);
-                            System.out.println("Print request sent.");
-                            break;
+                // Main command loop
+                while (authenticatedSession) {
+                    System.out.println("\nAvailable commands: print, queue, topqueue, start, stop, restart, status, readconfig, setconfig, logout");
+                    System.out.print("Enter command: ");
+                    String command = scanner.nextLine();
 
-                        case "queue":
-                            System.out.print("Enter printer: ");
-                            printer = scanner.nextLine();
-                            System.out.println("Queue: " + server.queue(printer, username, password));
-                            break;
+                    try {
+                        switch (command.toLowerCase()) {
+                            case "print":
+                                System.out.print("Enter filename: ");
+                                String filename = scanner.nextLine();
+                                System.out.print("Enter printer: ");
+                                String printer = scanner.nextLine();
+                                server.print(filename, printer, username, password);
+                                System.out.println("Print request sent.");
+                                break;
 
-                        case "logout":
-                            server.logout(username, password);
-                            System.out.println("Logged out successfully.");
-                            isRunning = false;
-                            break;
+                            case "queue":
+                                System.out.print("Enter printer: ");
+                                printer = scanner.nextLine();
+                                System.out.println("Queue: " + server.queue(printer, username, password));
+                                break;
 
-                        default:
-                            System.out.println("Unknown command. Please try again.");
-                    }
-                } catch (Exception e) {
-                    // Check if the session expired and prompt for reauthentication
-                    if (e.getMessage().contains("Session expired")) {
-                        System.out.println("Session expired. Please reauthenticate.");
-                        username = null; // Reset credentials
-                        password = null;
-                    } else {
-                        System.out.println("Server response: " + e.getMessage());
+                            case "topqueue":
+                                System.out.print("Enter printer: ");
+                                printer = scanner.nextLine();
+                                System.out.print("Enter job number: ");
+                                int job = Integer.parseInt(scanner.nextLine());
+                                server.topQueue(printer, job, username, password);
+                                System.out.println("Job moved to top of queue.");
+                                break;
+
+                            case "start":
+                                server.start(username, password);
+                                System.out.println("Print server started.");
+                                break;
+
+                            case "stop":
+                                server.stop(username, password);
+                                System.out.println("Print server stopped.");
+                                break;
+
+                            case "restart":
+                                server.restart(username, password);
+                                System.out.println("Print server restarted.");
+                                break;
+
+                            case "status":
+                                System.out.print("Enter printer: ");
+                                printer = scanner.nextLine();
+                                System.out.println("Status: " + server.status(printer, username, password));
+                                break;
+
+                            case "readconfig":
+                                System.out.print("Enter parameter: ");
+                                String parameter = scanner.nextLine();
+                                System.out.println("Config value: " + server.readConfig(parameter, username, password));
+                                break;
+
+                            case "setconfig":
+                                System.out.print("Enter parameter: ");
+                                parameter = scanner.nextLine();
+                                System.out.print("Enter value: ");
+                                String value = scanner.nextLine();
+                                server.setConfig(parameter, value, username, password);
+                                System.out.println("Config updated.");
+                                break;
+
+                            case "logout":
+                                server.logout(username, password);
+                                System.out.println("Logged out successfully.");
+                                authenticatedSession = false; // End the session loop
+                                break;
+
+                            default:
+                                System.out.println("Unknown command. Please try again.");
+                        }
+                    } catch (Exception e) {
+                        // Handle session expiration or other errors
+                        if (e.getMessage().contains("Session expired")) {
+                            System.out.println("Session expired. Please reauthenticate.");
+                            authenticatedSession = false; // End the session loop
+                        } else {
+                            System.out.println("Server response: " + e.getMessage());
+                        }
                     }
                 }
             }

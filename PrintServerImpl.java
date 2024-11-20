@@ -30,9 +30,9 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
-                if (parts.length == 2) {
-                    users.put(parts[0].trim(), parts[1].trim()); // Username, hashed password
-                    System.out.println("Loaded user: " + parts[0].trim() + " with hash " + parts[1].trim());
+                if (parts.length == 2) { // Load username and hashed password
+                    users.put(parts[0].trim(), parts[1].trim());
+                    System.out.println("Loaded user: " + parts[0].trim());
                 }
             }
         } catch (IOException e) {
@@ -61,8 +61,6 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
             throw new RemoteException("Authentication failed. Invalid username or password.");
         }
         String hashedPassword = hashPassword(password); // Hash the input password
-        System.out.println("Stored hash: " + users.get(username)); // Debug stored hash
-        System.out.println("Input hash: " + hashedPassword); // Debug computed hash
         if (!users.get(username).equals(hashedPassword)) {
             System.out.println("Authentication failed: Incorrect password for - " + username);
             throw new RemoteException("Authentication failed. Invalid username or password.");
