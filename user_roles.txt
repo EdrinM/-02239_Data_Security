@@ -1,0 +1,9 @@
+Alice: Admin
+Bob: Technician
+Cecilia: PowerUser
+David: User
+Erica: User
+Fred: User
+George: User
+Henry: User
+Ida: PowerUser

@@ -1,0 +1,4 @@
+Admin: print, queue, topqueue, start, stop, restart, status, readconfig, setconfig
+Technician: start, stop, restart, status, readconfig, setconfig
+PowerUser: print, queue, topqueue, restart
+User: print, queue
