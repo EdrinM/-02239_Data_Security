@@ -13,5 +13,7 @@ public interface PrintServer extends Remote {
     String readConfig(String parameter, String username) throws RemoteException;
     void setConfig(String parameter, String value, String username) throws RemoteException;
     void logout(String username) throws RemoteException;
+    String getAvailableCommandsForRole(String username) throws RemoteException;
+
 
 }

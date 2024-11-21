@@ -127,6 +127,16 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
         }
         sessions.put(username, System.currentTimeMillis());
     }
+    @Override
+    public String getAvailableCommandsForRole(String username) throws RemoteException {
+        String role = userRoles.get(username);
+        if (role == null || !roles.containsKey(role)) {
+            throw new RemoteException("Role not found for user: " + username);
+        }
+
+        Set<String> commands = roles.get(role);
+        return String.join(", ", commands) + ", logout";
+    }
 
     @Override
     public void login(String username, String password) throws RemoteException {

@@ -33,6 +33,12 @@ public class PrintClient {
                             System.out.println("Attempting login with username=" + username + " and password=" + password);
                             server.login(username, password);
                             System.out.println("Logged in successfully.");
+                            try {
+                                String availableCommands = server.getAvailableCommandsForRole(username);
+                                System.out.println("Available commands: " + availableCommands);
+                            } catch (Exception e) {
+                                System.out.println("Error fetching available commands: " + e.getMessage());
+                            }
                         } catch (Exception e) {
                             System.out.println("Login failed: " + e.getMessage());
                             username = null;
@@ -45,7 +51,6 @@ public class PrintClient {
 
                 // Main command loop
                 while (authenticatedSession) {
-                    System.out.println("\nAvailable commands: print, queue, topqueue, start, stop, restart, status, readconfig, setconfig, logout");
                     System.out.print("Enter command: ");
                     String command = scanner.nextLine();
 
