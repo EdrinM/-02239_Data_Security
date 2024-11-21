@@ -10,7 +10,7 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
 
     private Map<String, String> users = new HashMap<>(); // Username to hashed password
     private Map<String, Long> sessions = new HashMap<>(); // Username to session timestamps
-    private final long SESSION_TIMEOUT = 15000; // 5 seconds for testing
+    private final long SESSION_TIMEOUT = 60000; // 15 seconds for testing
     private Map<String, List<String>> printQueues = new HashMap<>(); // Printer to job queue
     private Map<String, String> config = new HashMap<>(); // Printer configuration
 
@@ -22,7 +22,7 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
         config.put("defaultPrinter", "Printer1");
 
         // Load users from file
-        loadUsersFromFile("./-02239_Data_Security/users.txt");
+        loadUsersFromFile("users.txt");
     }
 
     private void loadUsersFromFile(String filename) {
@@ -57,18 +57,15 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
 
     private void authenticate(String username, String password) throws RemoteException {
         if (!users.containsKey(username)) {
-            System.out.println("Authentication failed: Username not found - " + username);
             throw new RemoteException("Authentication failed. Invalid username or password.");
         }
-        String hashedPassword = hashPassword(password); // Hash the input password
+        String hashedPassword = hashPassword(password);
         if (!users.get(username).equals(hashedPassword)) {
-            System.out.println("Authentication failed: Incorrect password for - " + username);
             throw new RemoteException("Authentication failed. Invalid username or password.");
         }
-        System.out.println("Authentication successful for user: " + username);
-        if (!sessions.containsKey(username)) {
-            sessions.put(username, System.currentTimeMillis());
-        }
+        // On successful authentication, start a session
+        sessions.put(username, System.currentTimeMillis());
+        System.out.println("User " + username + " authenticated successfully and session started.");
     }
 
     private void checkSession(String username) throws RemoteException {
@@ -77,12 +74,17 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
             sessions.remove(username);
             throw new RemoteException("Session expired. Please reauthenticate.");
         }
+        // Renew session time
         sessions.put(username, System.currentTimeMillis());
     }
 
     @Override
-    public void print(String filename, String printer, String username, String password) throws RemoteException {
-        authenticate(username, password);
+    public void login(String username, String password) throws RemoteException {
+        authenticate(username, password); // Authenticate and start session
+    }
+
+    @Override
+    public void print(String filename, String printer, String username) throws RemoteException {
         checkSession(username);
         if (!printQueues.containsKey(printer)) {
             throw new RemoteException("Printer not found: " + printer);
@@ -92,8 +94,7 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
     }
 
     @Override
-    public String queue(String printer, String username, String password) throws RemoteException {
-        authenticate(username, password);
+    public String queue(String printer, String username) throws RemoteException {
         checkSession(username);
         if (!printQueues.containsKey(printer)) {
             throw new RemoteException("Printer not found: " + printer);
@@ -107,8 +108,7 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
     }
 
     @Override
-    public void topQueue(String printer, int job, String username, String password) throws RemoteException {
-        authenticate(username, password);
+    public void topQueue(String printer, int job, String username) throws RemoteException {
         checkSession(username);
         if (!printQueues.containsKey(printer)) {
             throw new RemoteException("Printer not found: " + printer);
@@ -123,22 +123,19 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
     }
 
     @Override
-    public void start(String username, String password) throws RemoteException {
-        authenticate(username, password);
+    public void start(String username) throws RemoteException {
         checkSession(username);
         System.out.println("Print server started.");
     }
 
     @Override
-    public void stop(String username, String password) throws RemoteException {
-        authenticate(username, password);
+    public void stop(String username) throws RemoteException {
         checkSession(username);
         System.out.println("Print server stopped.");
     }
 
     @Override
-    public void restart(String username, String password) throws RemoteException {
-        authenticate(username, password);
+    public void restart(String username) throws RemoteException {
         checkSession(username);
         for (String printer : printQueues.keySet()) {
             printQueues.get(printer).clear();
@@ -146,9 +143,9 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
         System.out.println("Print server restarted and queues cleared.");
     }
 
+
     @Override
-    public String status(String printer, String username, String password) throws RemoteException {
-        authenticate(username, password);
+    public String status(String printer, String username) throws RemoteException {
         checkSession(username);
         if (!printQueues.containsKey(printer)) {
             throw new RemoteException("Printer not found: " + printer);
@@ -157,23 +154,20 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
     }
 
     @Override
-    public String readConfig(String parameter, String username, String password) throws RemoteException {
-        authenticate(username, password);
+    public String readConfig(String parameter, String username) throws RemoteException {
         checkSession(username);
         return config.getOrDefault(parameter, "Parameter not found: " + parameter);
     }
 
     @Override
-    public void setConfig(String parameter, String value, String username, String password) throws RemoteException {
-        authenticate(username, password);
+    public void setConfig(String parameter, String value, String username) throws RemoteException {
         checkSession(username);
         config.put(parameter, value);
         System.out.println("Config set: " + parameter + " = " + value);
     }
 
     @Override
-    public void logout(String username, String password) throws RemoteException {
-        authenticate(username, password);
+    public void logout(String username) throws RemoteException {
         sessions.remove(username);
         System.out.println("User " + username + " logged out successfully.");
     }

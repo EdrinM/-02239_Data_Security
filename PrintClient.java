@@ -10,14 +10,13 @@ public class PrintClient {
             PrintServer server = (PrintServer) registry.lookup("PrintServer");
 
             Scanner scanner = new Scanner(System.in);
-
             boolean isRunning = true;
 
             while (isRunning) {
                 String username = null;
                 String password = null;
 
-                // Authenticate user
+                // Authenticate user via server login
                 while (username == null || password == null) {
                     System.out.print("Enter username: ");
                     username = scanner.nextLine();
@@ -25,11 +24,20 @@ public class PrintClient {
                     System.out.print("Enter password: ");
                     password = scanner.nextLine();
 
-                    // Simple validation (can add more checks as needed)
                     if (username.isBlank() || password.isBlank()) {
                         System.out.println("Invalid input. Please try again.");
                         username = null;
                         password = null;
+                    } else {
+                        try {
+                            System.out.println("Attempting login with username=" + username + " and password=" + password);
+                            server.login(username, password);
+                            System.out.println("Logged in successfully.");
+                        } catch (Exception e) {
+                            System.out.println("Login failed: " + e.getMessage());
+                            username = null;
+                            password = null; // Retry authentication
+                        }
                     }
                 }
 
@@ -48,14 +56,14 @@ public class PrintClient {
                                 String filename = scanner.nextLine();
                                 System.out.print("Enter printer: ");
                                 String printer = scanner.nextLine();
-                                server.print(filename, printer, username, password);
+                                server.print(filename, printer, username);
                                 System.out.println("Print request sent.");
                                 break;
 
                             case "queue":
                                 System.out.print("Enter printer: ");
                                 printer = scanner.nextLine();
-                                System.out.println("Queue: " + server.queue(printer, username, password));
+                                System.out.println("Queue: " + server.queue(printer, username));
                                 break;
 
                             case "topqueue":
@@ -63,35 +71,35 @@ public class PrintClient {
                                 printer = scanner.nextLine();
                                 System.out.print("Enter job number: ");
                                 int job = Integer.parseInt(scanner.nextLine());
-                                server.topQueue(printer, job, username, password);
+                                server.topQueue(printer, job, username);
                                 System.out.println("Job moved to top of queue.");
                                 break;
 
                             case "start":
-                                server.start(username, password);
+                                server.start(username);
                                 System.out.println("Print server started.");
                                 break;
 
                             case "stop":
-                                server.stop(username, password);
+                                server.stop(username);
                                 System.out.println("Print server stopped.");
                                 break;
 
                             case "restart":
-                                server.restart(username, password);
+                                server.restart(username);
                                 System.out.println("Print server restarted.");
                                 break;
 
                             case "status":
                                 System.out.print("Enter printer: ");
                                 printer = scanner.nextLine();
-                                System.out.println("Status: " + server.status(printer, username, password));
+                                System.out.println("Status: " + server.status(printer, username));
                                 break;
 
                             case "readconfig":
                                 System.out.print("Enter parameter: ");
                                 String parameter = scanner.nextLine();
-                                System.out.println("Config value: " + server.readConfig(parameter, username, password));
+                                System.out.println("Config value: " + server.readConfig(parameter, username));
                                 break;
 
                             case "setconfig":
@@ -99,12 +107,12 @@ public class PrintClient {
                                 parameter = scanner.nextLine();
                                 System.out.print("Enter value: ");
                                 String value = scanner.nextLine();
-                                server.setConfig(parameter, value, username, password);
+                                server.setConfig(parameter, value, username);
                                 System.out.println("Config updated.");
                                 break;
 
                             case "logout":
-                                server.logout(username, password);
+                                server.logout(username);
                                 System.out.println("Logged out successfully.");
                                 authenticatedSession = false; // End the session loop
                                 break;
@@ -126,6 +134,7 @@ public class PrintClient {
 
             scanner.close();
         } catch (Exception e) {
+            System.err.println("Client error: " + e.getMessage());
             e.printStackTrace();
         }
     }
