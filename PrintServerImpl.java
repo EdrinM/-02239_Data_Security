@@ -9,7 +9,7 @@ import java.util.*;
 public class PrintServerImpl extends UnicastRemoteObject implements PrintServer {
     private Map<String, String> users = new HashMap<>(); // Username to hashed password
     private Map<String, Long> sessions = new HashMap<>(); // Username to session timestamps
-    private final long SESSION_TIMEOUT = 60000; // 15 seconds for testing
+    private final long SESSION_TIMEOUT = 60000; // 60 000 sec timeout for testing
     private Map<String, List<String>> printQueues = new HashMap<>(); // Printer to job queue
     private Map<String, String> config = new HashMap<>(); // Printer configuration
     private Map<String, Set<String>> roles = new HashMap<>(); // Role to permissions
@@ -35,7 +35,7 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
             while ((line = reader.readLine()) != null) {
                 String[] parts = line.split(",");
                 if (parts.length == 2) {
-                    users.put(parts[0].trim(), parts[1].trim());
+                    users.put(parts[0].trim(), parts[1].trim()); // Load username and hashed password
                 }
             }
         } catch (IOException e) {
@@ -50,7 +50,6 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
                 String[] parts = line.split(":");
                 if (parts.length == 2) {
                     String role = parts[0].trim();
-                    // Strip spaces from each permission
                     Set<String> permissions = new HashSet<>();
                     for (String perm : parts[1].split(",")) {
                         permissions.add(perm.trim());
@@ -63,7 +62,6 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
             System.err.println("Error loading roles: " + e.getMessage());
         }
     }
-
 
     private void loadUserRolesFromFile(String filename) {
         try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
@@ -81,7 +79,6 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
             System.err.println("Error loading user roles: " + e.getMessage());
         }
     }
-
 
     private void enforceAccess(String username, String operation) throws RemoteException {
         String role = userRoles.get(username);
@@ -104,29 +101,24 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
         }
     }
 
-
-    private String hashPassword(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hashedBytes = md.digest(password.getBytes());
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hashedBytes) {
-                sb.append(String.format("%02x", b));
-            }
-            return sb.toString();
-        } catch (Exception e) {
-            throw new RuntimeException("Error hashing password", e);
-        }
-    }
-
     private void checkSession(String username) throws RemoteException {
         Long lastActive = sessions.get(username);
         if (lastActive == null || (System.currentTimeMillis() - lastActive) > SESSION_TIMEOUT) {
             sessions.remove(username);
             throw new RemoteException("Session expired. Please reauthenticate.");
         }
-        sessions.put(username, System.currentTimeMillis());
+        sessions.put(username, System.currentTimeMillis()); // Renew session
     }
+
+    @Override
+    public void login(String username, String hashedPassword) throws RemoteException {
+        if (!users.containsKey(username) || !users.get(username).equals(hashedPassword)) {
+            throw new RemoteException("Authentication failed. Invalid username or password.");
+        }
+        sessions.put(username, System.currentTimeMillis());
+        System.out.println("User " + username + " logged in successfully.");
+    }
+
     @Override
     public String getAvailableCommandsForRole(String username) throws RemoteException {
         String role = userRoles.get(username);
@@ -139,18 +131,6 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
     }
 
     @Override
-    public void login(String username, String password) throws RemoteException {
-        if (!users.containsKey(username)) {
-            throw new RemoteException("Authentication failed. Invalid username or password.");
-        }
-        String hashedPassword = hashPassword(password);
-        if (!users.get(username).equals(hashedPassword)) {
-            throw new RemoteException("Authentication failed. Invalid username or password.");
-        }
-        sessions.put(username, System.currentTimeMillis());
-    }
-
-    @Override
     public void print(String filename, String printer, String username) throws RemoteException {
         checkSession(username);
         enforceAccess(username, "print");
@@ -158,6 +138,7 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
             throw new RemoteException("Printer not found: " + printer);
         }
         printQueues.get(printer).add(filename);
+        System.out.println("Added job to " + printer + ": " + filename);
     }
 
     @Override
@@ -194,18 +175,24 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
     public void start(String username) throws RemoteException {
         checkSession(username);
         enforceAccess(username, "start");
+        System.out.println("Print server started.");
     }
 
     @Override
     public void stop(String username) throws RemoteException {
         checkSession(username);
         enforceAccess(username, "stop");
+        System.out.println("Print server stopped.");
     }
 
     @Override
     public void restart(String username) throws RemoteException {
         checkSession(username);
         enforceAccess(username, "restart");
+        for (String printer : printQueues.keySet()) {
+            printQueues.get(printer).clear();
+        }
+        System.out.println("Print server restarted and queues cleared.");
     }
 
     @Override
@@ -227,10 +214,12 @@ public class PrintServerImpl extends UnicastRemoteObject implements PrintServer 
         checkSession(username);
         enforceAccess(username, "setconfig");
         config.put(parameter, value);
+        System.out.println("Config set: " + parameter + " = " + value);
     }
 
     @Override
     public void logout(String username) throws RemoteException {
         sessions.remove(username);
+        System.out.println("User " + username + " logged out successfully.");
     }
 }

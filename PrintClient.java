@@ -1,22 +1,24 @@
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.security.MessageDigest;
 import java.util.Scanner;
 
 public class PrintClient {
     public static void main(String[] args) {
         try {
             // Connect to the remote server
-            Registry registry = LocateRegistry.getRegistry("localhost", 2099); // Match server port
+            Registry registry = LocateRegistry.getRegistry("localhost", 2099);
             PrintServer server = (PrintServer) registry.lookup("PrintServer");
 
             Scanner scanner = new Scanner(System.in);
+
             boolean isRunning = true;
 
             while (isRunning) {
                 String username = null;
                 String password = null;
 
-                // Authenticate user via server login
+                // Authenticate user
                 while (username == null || password == null) {
                     System.out.print("Enter username: ");
                     username = scanner.nextLine();
@@ -30,19 +32,27 @@ public class PrintClient {
                         password = null;
                     } else {
                         try {
-                            System.out.println("Attempting login with username=" + username + " and password=" + password);
-                            server.login(username, password);
+                            // Hash the password
+                            String hashedPassword = hashPassword(password);
+
+                            System.out.println("Attempting login with username=" + username);
+                            server.login(username, hashedPassword);
+
                             System.out.println("Logged in successfully.");
+
                             try {
+                                // Fetch available commands based on role
                                 String availableCommands = server.getAvailableCommandsForRole(username);
                                 System.out.println("Available commands: " + availableCommands);
                             } catch (Exception e) {
                                 System.out.println("Error fetching available commands: " + e.getMessage());
                             }
+
+                            break;
                         } catch (Exception e) {
                             System.out.println("Login failed: " + e.getMessage());
                             username = null;
-                            password = null; // Retry authentication
+                            password = null;
                         }
                     }
                 }
@@ -119,17 +129,16 @@ public class PrintClient {
                             case "logout":
                                 server.logout(username);
                                 System.out.println("Logged out successfully.");
-                                authenticatedSession = false; // End the session loop
+                                authenticatedSession = false;
                                 break;
 
                             default:
                                 System.out.println("Unknown command. Please try again.");
                         }
                     } catch (Exception e) {
-                        // Handle session expiration or other errors
                         if (e.getMessage().contains("Session expired")) {
                             System.out.println("Session expired. Please reauthenticate.");
-                            authenticatedSession = false; // End the session loop
+                            authenticatedSession = false;
                         } else {
                             System.out.println("Server response: " + e.getMessage());
                         }
@@ -141,6 +150,20 @@ public class PrintClient {
         } catch (Exception e) {
             System.err.println("Client error: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private static String hashPassword(String password) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hashedBytes = md.digest(password.getBytes());
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashedBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Error hashing password", e);
         }
     }
 }
